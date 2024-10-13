@@ -1,8 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
-from fetch_stock_data.tw import fetch_stock_tickers
+from fetch_stock_data import fetch_stock_tickers
 import os
 from datetime import datetime
 import logging
@@ -11,6 +11,9 @@ app = Flask(__name__)
 
 # 配置日志记录
 logging.basicConfig(level=logging.INFO)
+
+# 用于跟踪API请求的数量
+request_count = 0
 
 def validate_date(date_text):
     try:
@@ -21,6 +24,9 @@ def validate_date(date_text):
 
 @app.route('/fetch-stock-data', methods=['POST'])
 def fetch_stock_data():
+    global request_count
+    request_count += 1  # 增加请求计数
+
     data = request.get_json()
     
     # 取得輸入參數
@@ -106,5 +112,24 @@ def get_live_price(ticker):
         logging.error(f"獲取 {ticker} 的即時價格失敗: {str(e)}")
         return jsonify({'error': str(e)}), 404
 
+@app.route('/monitor', methods=['GET'])
+def monitor():
+    # 生成监控数据
+    plt.figure(figsize=(10, 5))
+    plt.bar([0], [request_count], color='blue')
+    plt.title('API Requests Monitor')
+    plt.xlabel('API Call Count')
+    plt.ylabel('Number of Requests')
+    
+    # 保存为PNG文件
+    image_path = 'static/api_monitor.png'
+    plt.savefig(image_path)
+    plt.close()  # 关闭图形，以免内存泄露
+    
+    return send_file(image_path, mimetype='image/png')
+
 if __name__ == '__main__':
+    # 确保保存PNG的目录存在
+    if not os.path.exists('static'):
+        os.makedirs('static')
     app.run(debug=True)
