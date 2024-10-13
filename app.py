@@ -22,6 +22,86 @@ def validate_date(date_text):
         return False
     return True
 
+@app.route('/fetch-stock-data-web', methods=['POST'])
+def fetch_stock_data():
+    data = request.get_json()
+    
+    # 取得輸入參數
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    output_format = data.get('output_format')
+    save_path = os.getcwd()  # 保存路径使用当前工作目录
+    filter_industry = data.get('industry', None)
+    sort_by = data.get('sort_by', 'date')  # 默認按日期排序
+    
+    # 日期格式验证
+    if not (validate_date(start_date) and validate_date(end_date)):
+        return jsonify({'error': '日期格式不正確，請使用YYYY-MM-DD格式。'}), 400
+
+    # 設定URL
+    url = 'https://isin.twse.com.tw/isin/C_public.jsp?strMode=2'
+    
+    # 取得台灣所有股票代碼
+    stock_data = fetch_stock_tickers(url)
+    
+    # 如果提供了行業過濾條件，則過濾股票
+    if filter_industry:
+        stock_data = [stock for stock in stock_data if stock['industry'] == filter_industry]
+    
+    tickers = [stock['ticker'] for stock in stock_data]
+
+    df_list = []
+    for ticker in tickers:
+        try:
+            stock_history = yf.download(ticker, start=start_date, end=end_date)
+            stock_history['Ticker'] = ticker
+            df_list.append(stock_history)
+        except Exception as e:
+            logging.error(f"無法獲取 {ticker} 的數據: {e}")
+
+    if not df_list:
+        return jsonify({'error': '未獲取到任何股票數據'}), 404
+
+    df = pd.concat(df_list)
+
+    # 根据排序条件进行排序
+    if sort_by == 'price':
+        df = df.sort_values(by='Close')
+    else:  # 默认按日期排序
+        df = df.sort_index()
+
+    # 輸出格式處理
+    file_name = f'stock_data_{start_date}_{end_date}.{output_format}'
+    file_path = os.path.join(save_path, file_name)
+
+    if output_format == 'csv':
+        df.to_csv(file_path)
+        return send_file(file_path, as_attachment=True)
+    
+    elif output_format == 'json':
+        result = df.to_json(orient='records')
+        with open(file_path, 'w') as f:
+            f.write(result)
+        return send_file(file_path, as_attachment=True)
+    
+    elif output_format == 'html':
+        html_content = df.to_html()
+        with open(file_path, 'w') as f:
+            f.write(html_content)
+        return send_file(file_path, as_attachment=True)
+    
+    elif output_format == 'chart':
+        plt.figure(figsize=(10, 5))
+        df['Close'].plot(title='Stock Prices')
+        plt.xlabel('Date')
+        plt.ylabel('Price')
+        plt.grid()
+        plt.savefig(file_path)
+        plt.close()  # 关闭图形以释放内存
+        return send_file(file_path, as_attachment=True)
+    
+    return jsonify({'error': '無效的輸出格式'}), 400
+
 @app.route('/fetch-stock-data', methods=['POST'])
 def fetch_stock_data():
     global request_count
