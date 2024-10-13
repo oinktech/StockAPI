@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file,render_template
+from flask import Flask, request, jsonify, send_file, render_template
 import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
@@ -26,9 +26,8 @@ def validate_date(date_text):
 def index():
     return render_template('index.html')
 
-
 @app.route('/fetch-stock-data-web', methods=['POST'])
-def fetch_stock_data():
+def fetch_stock_data_web():
     data = request.get_json()
     
     # 取得輸入參數
