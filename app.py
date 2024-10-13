@@ -216,4 +216,4 @@ if __name__ == '__main__':
     # 确保保存PNG的目录存在
     if not os.path.exists('static'):
         os.makedirs('static')
-    app.run(debug=True)
+    app.run(debug=True,port=10000, host='0.0.0.0')
