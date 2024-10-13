@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票數據查詢</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            max-width: 400px;
+            margin: auto;
+        }
+        input, select, button {
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>股票數據查詢</h1>
+    <form id="stockForm">
+        <input type="text" id="start_date" placeholder="開始日期 (YYYY-MM-DD)" required>
+        <input type="text" id="end_date" placeholder="結束日期 (YYYY-MM-DD)" required>
+        <select id="output_format" required>
+            <option value="">選擇輸出格式</option>
+            <option value="csv">CSV</option>
+            <option value="json">JSON</option>
+            <option value="html">HTML</option>
+            <option value="chart">圖表</option>
+        </select>
+        <button type="submit">查詢股票數據</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('stockForm').addEventListener('submit', function(event) {
+            event.preventDefault();  // 防止表单默认提交
+
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            const outputFormat = document.getElementById('output_format').value;
+
+            const requestData = {
+                start_date: startDate,
+                end_date: endDate,
+                output_format: outputFormat
+            };
+
+            fetch('/fetch-stock-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.blob(); // 获取 Blob 对象
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `stock_data_${startDate}_${endDate}.${outputFormat}`; // 自动命名下载文件
+                document.body.appendChild(a);
+                a.click(); // 模拟点击下载
+                a.remove(); // 移除链接元素
+                window.URL.revokeObjectURL(url); // 释放内存
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML = `<p style="color:red;">錯誤: ${error.message}</p>`;
+            });
+        });
+    </script>
+</body>
+</html>
