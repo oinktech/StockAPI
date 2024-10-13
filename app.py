@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file,render_template
 import pandas as pd
 import matplotlib.pyplot as plt
 import yfinance as yf
@@ -21,6 +21,11 @@ def validate_date(date_text):
     except ValueError:
         return False
     return True
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 
 @app.route('/fetch-stock-data-web', methods=['POST'])
 def fetch_stock_data():
