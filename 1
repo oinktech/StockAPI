@@ -8,6 +8,7 @@ def fetch_stock_tickers(url):
     if response.status_code != 200:
         raise Exception("無法獲取資料，請檢查網絡連接或URL是否正確。")
 
+
     # 解析 HTML
     soup = BeautifulSoup(response.content, 'html.parser')
     stock_table = soup.find('table', {'class': 'h4'})
